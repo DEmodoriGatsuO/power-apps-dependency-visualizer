@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power Apps Dependency Visualizer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div class="header-content">
+                <div class="language-selector-container">
+                    <select id="language-selector" class="language-selector">
+                        <option value="en">English</option>
+                        <option value="ja">日本語</option>
+                    </select>
+                </div>
+                <h1 id="app-title"><i class="fas fa-project-diagram"></i> Power Apps Dependency Visualizer</h1>
+                <p id="app-subtitle">YAMLソースコードからコントロール間の依存関係を視覚化するツール</p>
+            </div>
+        </header>
+
+        <main>
+            <section class="input-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 id="yaml-code-label"><i class="fas fa-code"></i> YAMLソースコード</h2>
+                        <div class="card-actions">
+                            <button id="load-sample" class="btn-text">
+                                <i class="fas fa-file-code"></i> サンプルを読み込む
+                            </button>
+                        </div>
+                    </div>
+                    <div class="alert alert-error" id="error-alert">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span id="error-message">エラーが発生しました。正しいYAMLフォーマットであることを確認してください。</span>
+                    </div>
+                    <div class="alert alert-success" id="success-alert">
+                        <i class="fas fa-check-circle"></i>
+                        <span id="success-message">解析が完了しました。下部の可視化結果をご確認ください。</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="textarea-container">
+                            <textarea id="yaml-input" placeholder="Power AppsのYAMLソースコードをここに貼り付けてください..."></textarea>
+                        </div>
+                        <div class="button-group">
+                            <button id="analyze-btn" class="btn btn-primary">
+                                <i class="fas fa-search"></i> 依存関係を解析
+                            </button>
+                            <button id="clear-btn" class="btn btn-secondary">
+                                <i class="fas fa-trash"></i> クリア
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="result-section" class="result-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 id="visualization-title"><i class="fas fa-chart-network"></i> 依存関係の可視化</h2>
+                        <div class="card-actions">
+                            <div class="view-controls">
+                                <button id="zoom-in" class="btn-icon" title="ズームイン">
+                                    <i class="fas fa-search-plus"></i>
+                                </button>
+                                <button id="zoom-out" class="btn-icon" title="ズームアウト">
+                                    <i class="fas fa-search-minus"></i>
+                                </button>
+                                <button id="reset-view" class="btn-icon" title="表示をリセット">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-container">
+                        <div class="tabs">
+                            <button id="graph-tab-btn" class="tab active" data-tab="graph">
+                                <i class="fas fa-chart-network"></i> グラフ図
+                            </button>
+                            <button id="table-tab-btn" class="tab" data-tab="table">
+                                <i class="fas fa-table"></i> テーブル表示
+                            </button>
+                        </div>
+                        <div class="tab-content-container">
+                            <div id="graph-tab" class="tab-content active">
+                                <div class="graph-container" id="graph-container">
+                                    <!-- D3.jsで描画 -->
+                                </div>
+                                <div class="legend">
+                                    <h3 id="legend-title">コントロールタイプ</h3>
+                                    <div class="legend-item">
+                                        <span class="color-dot" style="background-color: #742774;"></span>
+                                        <span>Screen / Form</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <span class="color-dot" style="background-color: #d13438;"></span>
+                                        <span>DataCard</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <span class="color-dot" style="background-color: #8764b8;"></span>
+                                        <span>Input Controls</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <span class="color-dot" style="background-color: #107c10;"></span>
+                                        <span>Text / Label</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="table-tab" class="tab-content">
+                                <div class="table-controls">
+                                    <div class="search-container">
+                                        <i class="fas fa-search"></i>
+                                        <input type="text" id="table-search" placeholder="コントロール名で検索...">
+                                    </div>
+                                </div>
+                                <div class="table-container">
+                                    <table id="dependency-table">
+                                        <thead>
+                                            <tr>
+                                                <th>コントロール名</th>
+                                                <th>タイプ</th>
+                                                <th>親コントロール</th>
+                                                <th>依存するコントロール</th>
+                                                <th>依存されるコントロール</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- 依存関係テーブル -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="loader" id="loader">
+                <div class="spinner"></div>
+                <p id="loader-text">解析中...</p>
+            </div>
+        </main>
+
+        <footer>
+            <p id="footer-text">Power Apps 依存関係ビジュアライザー v1.0 | Created by Claude (Anthropic)</p>
+        </footer>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
